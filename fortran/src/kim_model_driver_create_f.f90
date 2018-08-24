@@ -111,8 +111,8 @@ module kim_model_driver_create_f_module
     end subroutine set_influence_distance_pointer
 
     subroutine set_neighbor_list_pointers(model_driver_create, &
-      number_of_neighbor_lists, cutoffs_ptr, padding_neighbor_hints_ptr, &
-      half_list_hints_ptr) &
+      number_of_neighbor_lists, cutoffs_ptr, &
+      model_will_not_request_neighbors_of_noncontributing_particles) &
       bind(c, name="KIM_ModelDriverCreate_SetNeighborListPointers")
       use, intrinsic :: iso_c_binding
       import kim_model_driver_create_type
@@ -121,8 +121,8 @@ module kim_model_driver_create_f_module
         :: model_driver_create
       integer(c_int), intent(in), value :: number_of_neighbor_lists
       type(c_ptr), intent(in), value :: cutoffs_ptr
-      type(c_ptr), intent(in), value :: padding_neighbor_hints_ptr
-      type(c_ptr), intent(in), value :: half_list_hints_ptr
+      type(c_ptr), intent(in), value :: &
+        model_will_not_request_neighbors_of_noncontributing_particles
     end subroutine set_neighbor_list_pointers
 
     integer(c_int) function set_refresh_pointer( &
@@ -376,6 +376,7 @@ subroutine kim_model_driver_create_get_parameter_file_name( &
     : kim_model_driver_create_handle_type
   use kim_model_driver_create_f_module, only &
     : kim_model_driver_create_type, get_parameter_file_name
+  use kim_convert_string_module, only : kim_convert_string
   implicit none
   type(kim_model_driver_create_handle_type), intent(in) &
     :: model_driver_create_handle
@@ -385,18 +386,13 @@ subroutine kim_model_driver_create_get_parameter_file_name( &
   type(kim_model_driver_create_type), pointer :: model_driver_create
 
   type(c_ptr) :: p
-  character(len=len(parameter_file_name)+1, kind=c_char), pointer :: fp
-  integer(c_int) :: null_index
 
   call c_f_pointer(model_driver_create_handle%p, model_driver_create)
   ierr = get_parameter_file_name(model_driver_create, &
     index-1, p)
   if (c_associated(p)) then
-    call c_f_pointer(p, fp)
-    null_index = scan(fp, char(0))-1
-    parameter_file_name = fp(1:null_index)
+    call kim_convert_string(p, parameter_file_name)
   else
-    nullify(fp)
     parameter_file_name = ""
   end if
 end subroutine kim_model_driver_create_get_parameter_file_name
@@ -440,7 +436,7 @@ end subroutine kim_model_driver_create_set_influence_distance_pointer
 
 subroutine kim_model_driver_create_set_neighbor_list_pointers( &
   model_driver_create_handle, number_of_neighbor_lists, cutoffs, &
-  padding_neighbor_hints, half_list_hints)
+  model_will_not_request_neighbors_of_noncontributing_particles)
   use, intrinsic :: iso_c_binding
   use kim_model_driver_create_module, only &
     : kim_model_driver_create_handle_type
@@ -452,16 +448,15 @@ subroutine kim_model_driver_create_set_neighbor_list_pointers( &
   integer(c_int), intent(in), value :: number_of_neighbor_lists
   real(c_double), intent(in), target :: cutoffs(number_of_neighbor_lists)
   integer(c_int), intent(in), target :: &
-    padding_neighbor_hints(number_of_neighbor_lists)
-  integer(c_int), intent(in), target :: &
-    half_list_hints(number_of_neighbor_lists)
+    model_will_not_request_neighbors_of_noncontributing_particles( &
+    number_of_neighbor_lists)
 
   type(kim_model_driver_create_type), pointer :: model_driver_create
 
   call c_f_pointer(model_driver_create_handle%p, model_driver_create)
   call set_neighbor_list_pointers(model_driver_create, &
-    number_of_neighbor_lists, c_loc(cutoffs), c_loc(padding_neighbor_hints), &
-    c_loc(half_list_hints))
+    number_of_neighbor_lists, c_loc(cutoffs), &
+    c_loc(model_will_not_request_neighbors_of_noncontributing_particles))
 end subroutine kim_model_driver_create_set_neighbor_list_pointers
 
 subroutine kim_model_driver_create_set_refresh_pointer( &
@@ -789,6 +784,7 @@ subroutine kim_model_driver_create_string(model_driver_create_handle, &
     : kim_model_driver_create_handle_type
   use kim_model_driver_create_f_module, only &
     : kim_model_driver_create_type, model_driver_create_string
+  use kim_convert_string_module, only : kim_convert_string
   implicit none
   type(kim_model_driver_create_handle_type), intent(in) &
     :: model_driver_create_handle
@@ -796,17 +792,12 @@ subroutine kim_model_driver_create_string(model_driver_create_handle, &
   type(kim_model_driver_create_type), pointer :: model_driver_create
 
   type(c_ptr) :: p
-  character(len=len(string)+1, kind=c_char), pointer :: fp
-  integer(c_int) :: null_index
 
   call c_f_pointer(model_driver_create_handle%p, model_driver_create)
   p = model_driver_create_string(model_driver_create)
   if (c_associated(p)) then
-    call c_f_pointer(p, fp)
-    null_index = scan(fp, char(0))-1
-    string = fp(1:null_index)
+    call kim_convert_string(p, string)
   else
-    nullify(fp)
     string = ""
   end if
 end subroutine kim_model_driver_create_string

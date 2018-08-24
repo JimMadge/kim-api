@@ -105,7 +105,8 @@ module kim_model_f_module
     end subroutine get_influence_distance
 
     subroutine get_neighbor_list_pointers(model, number_of_neighbor_lists, &
-      cutoffs_ptr, padding_neighbor_hints_ptr, half_list_hints_ptr) &
+      cutoffs_ptr, &
+      model_will_not_request_neighbors_of_noncontributing__ptr) &
       bind(c, name="KIM_Model_GetNeighborListPointers")
       use, intrinsic :: iso_c_binding
       import kim_model_type
@@ -113,8 +114,8 @@ module kim_model_f_module
       type(kim_model_type), intent(in) :: model
       integer(c_int), intent(out) :: number_of_neighbor_lists
       type(c_ptr), intent(out) :: cutoffs_ptr
-      type(c_ptr), intent(out) :: padding_neighbor_hints_ptr
-      type(c_ptr), intent(out) :: half_list_hints_ptr
+      type(c_ptr), intent(out) :: &
+        model_will_not_request_neighbors_of_noncontributing__ptr
     end subroutine get_neighbor_list_pointers
 
     subroutine get_units(model, length_unit, energy_unit, charge_unit, &
@@ -407,15 +408,15 @@ subroutine kim_model_get_number_of_neighbor_lists(model_handle, &
   integer(c_int), intent(out) :: number_of_neighbor_lists
   type(kim_model_type), pointer :: model
 
-  type(c_ptr) cutoffs_ptr, padding_neighbor_hints_ptr, half_list_hints_ptr
+  type(c_ptr) cutoffs_ptr, hint_ptr
 
   call c_f_pointer(model_handle%p, model)
   call get_neighbor_list_pointers(model, number_of_neighbor_lists, &
-    cutoffs_ptr, padding_neighbor_hints_ptr, half_list_hints_ptr)
+    cutoffs_ptr, hint_ptr)
 end subroutine kim_model_get_number_of_neighbor_lists
 
 subroutine kim_model_get_neighbor_list_values(model_handle, cutoffs, &
-  padding_neighbor_hints, half_list_hints, ierr)
+  model_will_not_request_neighbors_of_noncontributing_particles, ierr)
   use, intrinsic :: iso_c_binding
   use kim_model_module, only : kim_model_handle_type
   use kim_model_f_module, only : kim_model_type, &
@@ -423,22 +424,22 @@ subroutine kim_model_get_neighbor_list_values(model_handle, cutoffs, &
   implicit none
   type(kim_model_handle_type), intent(in) :: model_handle
   real(c_double), intent(out) :: cutoffs(:)
-  integer(c_int), intent(out) :: padding_neighbor_hints(:)
-  integer(c_int), intent(out) :: half_list_hints(:)
+  integer(c_int), intent(out) :: &
+    model_will_not_request_neighbors_of_noncontributing_particles(:)
   integer(c_int), intent(out) :: ierr
   type(kim_model_type), pointer :: model
 
   integer(c_int) number_of_neighbor_lists
   real(c_double), pointer :: cutoffs_fpointer(:)
-  integer(c_int), pointer :: padding_neighbor_hints_fpointer(:)
-  integer(c_int), pointer :: half_list_hints_fpointer(:)
+  integer(c_int), pointer :: &
+    model_will_not_request_neighbors_of_noncontributing__fpointer(:)
   type(c_ptr) cutoffs_ptr
-  type(c_ptr) padding_neighbor_hints_ptr
-  type(c_ptr) half_list_hints_ptr
+  type(c_ptr) model_will_not_request_neighbors_of_noncontributing__ptr
 
   call c_f_pointer(model_handle%p, model)
   call get_neighbor_list_pointers(model, number_of_neighbor_lists, &
-    cutoffs_ptr, padding_neighbor_hints_ptr, half_list_hints_ptr)
+    cutoffs_ptr, &
+    model_will_not_request_neighbors_of_noncontributing__ptr)
   if (c_associated(cutoffs_ptr)) then
     call c_f_pointer(cutoffs_ptr, cutoffs_fpointer, [number_of_neighbor_lists])
   else
@@ -451,31 +452,25 @@ subroutine kim_model_get_neighbor_list_values(model_handle, cutoffs, &
     cutoffs = cutoffs_fpointer(1:number_of_neighbor_lists)
   end if
 
-  if (c_associated(padding_neighbor_hints_ptr)) then
-    call c_f_pointer(padding_neighbor_hints_ptr, &
-      padding_neighbor_hints_fpointer, [number_of_neighbor_lists])
+  if (c_associated( &
+    model_will_not_request_neighbors_of_noncontributing__ptr)) then
+    call c_f_pointer( &
+      model_will_not_request_neighbors_of_noncontributing__ptr, &
+      model_will_not_request_neighbors_of_noncontributing__fpointer, &
+      [number_of_neighbor_lists])
   else
-    nullify(padding_neighbor_hints_fpointer)
+    nullify( &
+      model_will_not_request_neighbors_of_noncontributing__fpointer)
   end if
-  if (size(padding_neighbor_hints) < number_of_neighbor_lists) then
+  if (size( &
+    model_will_not_request_neighbors_of_noncontributing_particles) &
+    < number_of_neighbor_lists) then
     ierr = 1
   else
     ierr = 0
-    padding_neighbor_hints &
-      = padding_neighbor_hints_fpointer(1:number_of_neighbor_lists)
-  end if
-
-  if (c_associated(half_list_hints_ptr)) then
-    call c_f_pointer(half_list_hints_ptr, &
-      half_list_hints_fpointer, [number_of_neighbor_lists])
-  else
-    nullify(half_list_hints_fpointer)
-  end if
-  if (size(half_list_hints) < number_of_neighbor_lists) then
-    ierr = 1
-  else
-    ierr = 0
-    half_list_hints = half_list_hints_fpointer(1:number_of_neighbor_lists)
+    model_will_not_request_neighbors_of_noncontributing_particles = &
+      model_will_not_request_neighbors_of_noncontributing__fpointer( &
+      1:number_of_neighbor_lists)
   end if
 end subroutine kim_model_get_neighbor_list_values
 
@@ -618,6 +613,7 @@ subroutine kim_model_get_parameter_data_type_extent_and_description( &
   use kim_data_type_module, only : kim_data_type_type
   use kim_model_f_module, only : kim_model_type, &
     get_parameter_data_type_extent_and_description
+  use kim_convert_string_module, only : kim_convert_string
   implicit none
   type(kim_model_handle_type), intent(in) :: model_handle
   integer(c_int), intent(in), value :: parameter_index
@@ -628,18 +624,13 @@ subroutine kim_model_get_parameter_data_type_extent_and_description( &
   type(kim_model_type), pointer :: model
 
   type(c_ptr) :: p
-  character(len=len(description)+1, kind=c_char), pointer :: fp
-  integer(c_int) :: null_index
 
   call c_f_pointer(model_handle%p, model)
   ierr = get_parameter_data_type_extent_and_description(model, &
     parameter_index-1, data_type, extent, p)
   if (c_associated(p)) then
-    call c_f_pointer(p, fp)
-    null_index = scan(fp, char(0))-1
-    description = fp(1:null_index)
+    call kim_convert_string(p, description)
   else
-    nullify(fp)
     description = ""
   end if
 end subroutine kim_model_get_parameter_data_type_extent_and_description
@@ -746,23 +737,19 @@ subroutine kim_model_string(model_handle, string)
   use, intrinsic :: iso_c_binding
   use kim_model_module, only : kim_model_handle_type
   use kim_model_f_module, only : kim_model_type, model_string
+  use kim_convert_string_module, only : kim_convert_string
   implicit none
   type(kim_model_handle_type), intent(in) :: model_handle
   character(len=*, kind=c_char), intent(out) :: string
   type(kim_model_type), pointer :: model
 
   type(c_ptr) :: p
-  character(len=len(string)+1, kind=c_char), pointer :: fp
-  integer(c_int) :: null_index
 
   call c_f_pointer(model_handle%p, model)
   p = model_string(model)
   if (c_associated(p)) then
-    call c_f_pointer(p, fp)
-    null_index = scan(fp, char(0))-1
-    string = fp(1:null_index)
+    call kim_convert_string(p, string)
   else
-    nullify(fp)
     string = ""
   end if
 end subroutine kim_model_string

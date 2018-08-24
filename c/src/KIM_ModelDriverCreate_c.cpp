@@ -212,15 +212,14 @@ void KIM_ModelDriverCreate_SetNeighborListPointers(
     KIM_ModelDriverCreate * const modelDriverCreate,
     int const numberOfNeighborLists,
     double const * const cutoffs,
-    int const * const paddingNeighborHints,
-    int const * const halfListHints)
+    int const * const modelWillNotRequestNeighborsOfNoncontributingParticles)
 {
   CONVERT_POINTER;
 
-  pModelDriverCreate->SetNeighborListPointers(numberOfNeighborLists,
-                                              cutoffs,
-                                              paddingNeighborHints,
-                                              halfListHints);
+  pModelDriverCreate->SetNeighborListPointers(
+      numberOfNeighborLists,
+      cutoffs,
+      modelWillNotRequestNeighborsOfNoncontributingParticles);
 }
 
 int KIM_ModelDriverCreate_SetRefreshPointer(
@@ -382,7 +381,7 @@ void KIM_ModelDriverCreate_LogEntry(
                                lineNumber, fileName);
 }
 
-char const * const KIM_ModelDriverCreate_String(
+char const * KIM_ModelDriverCreate_String(
     KIM_ModelDriverCreate const * const modelDriverCreate)
 {
   CONVERT_POINTER;

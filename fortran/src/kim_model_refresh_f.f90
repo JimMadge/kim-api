@@ -62,8 +62,8 @@ module kim_model_refresh_f_module
     end subroutine set_influence_distance_pointer
 
     subroutine set_neighbor_list_pointers(model_refresh, &
-      number_of_neighbor_lists, cutoffs_ptr, padding_neighbor_hints_ptr, &
-      half_list_hints_ptr) &
+      number_of_neighbor_lists, cutoffs_ptr, &
+      modelWillNotRequestNeighborsOfNoncontributingParticles) &
       bind(c, name="KIM_ModelRefresh_SetNeighborListPointers")
       use, intrinsic :: iso_c_binding
       import kim_model_refresh_type
@@ -72,8 +72,8 @@ module kim_model_refresh_f_module
         model_refresh
       integer(c_int), intent(in), value :: number_of_neighbor_lists
       type(c_ptr), intent(in), value :: cutoffs_ptr
-      type(c_ptr), intent(in), value :: padding_neighbor_hints_ptr
-      type(c_ptr), intent(in), value :: half_list_hints_ptr
+      type(c_ptr), intent(in), value :: &
+        modelWillNotRequestNeighborsOfNoncontributingParticles
     end subroutine set_neighbor_list_pointers
 
     subroutine get_model_buffer_pointer(model_refresh, ptr) &
@@ -157,7 +157,7 @@ end subroutine kim_model_refresh_set_influence_distance_pointer
 
 subroutine kim_model_refresh_set_neighbor_list_pointers( &
   model_refresh_handle, number_of_neighbor_lists, cutoffs, &
-  padding_neighbor_hints, half_list_hints)
+  modelWillNotRequestNeighborsOfNoncontributingParticles)
   use, intrinsic :: iso_c_binding
   use kim_model_refresh_module, only : kim_model_refresh_handle_type
   use kim_model_refresh_f_module, only : kim_model_refresh_type, &
@@ -167,14 +167,14 @@ subroutine kim_model_refresh_set_neighbor_list_pointers( &
   integer(c_int), intent(in), value :: number_of_neighbor_lists
   real(c_double), intent(in), target :: cutoffs(number_of_neighbor_lists)
   integer(c_int), intent(in), target :: &
-    padding_neighbor_hints(number_of_neighbor_lists)
-  integer(c_int), intent(in), target :: &
-    half_list_hints(number_of_neighbor_lists)
+    modelWillNotRequestNeighborsOfNoncontributingParticles( &
+    number_of_neighbor_lists)
   type(kim_model_refresh_type), pointer :: model_refresh
 
   call c_f_pointer(model_refresh_handle%p, model_refresh)
   call set_neighbor_list_pointers(model_refresh, number_of_neighbor_lists, &
-    c_loc(cutoffs), c_loc(padding_neighbor_hints), c_loc(half_list_hints))
+    c_loc(cutoffs), &
+    c_loc(modelWillNotRequestNeighborsOfNoncontributingParticles))
 end subroutine kim_model_refresh_set_neighbor_list_pointers
 
 subroutine kim_model_refresh_get_model_buffer_pointer( &
@@ -216,23 +216,19 @@ subroutine kim_model_refresh_string(model_refresh_handle, string)
   use kim_model_refresh_module, only : kim_model_refresh_handle_type
   use kim_model_refresh_f_module, only : kim_model_refresh_type, &
     model_refresh_string
+  use kim_convert_string_module, only : kim_convert_string
   implicit none
   type(kim_model_refresh_handle_type), intent(in) :: model_refresh_handle
   character(len=*, kind=c_char), intent(out) :: string
   type(kim_model_refresh_type), pointer :: model_refresh
 
   type(c_ptr) :: p
-  character(len=len(string)+1, kind=c_char), pointer :: fp
-  integer(c_int) :: null_index
 
   call c_f_pointer(model_refresh_handle%p, model_refresh)
   p = model_refresh_string(model_refresh)
   if (c_associated(p)) then
-    call c_f_pointer(p, fp)
-    null_index = scan(fp, char(0))-1
-    string = fp(1:null_index)
+    call kim_convert_string(p, string)
   else
-    nullify(fp)
     string = ""
   end if
 end subroutine kim_model_refresh_string

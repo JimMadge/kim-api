@@ -32,69 +32,71 @@
 # Release: This file is part of the kim-api.git repository.
 #
 
+cmake_minimum_required(VERSION 3.9)
+
 cmake_policy(SET CMP0057 NEW)
 cmake_policy(SET CMP0054 NEW)
 
 find_package(Doxygen)
 
-set(DOXYGEN_PROJECT_NAME    "KIM API V2")
-set(DOXYGEN_STRIP_FROM_PATH "../../")
-set(DOXYGEN_TAB_SIZE        2)
-set(DOXYGEN_EXTRACT_ALL     YES)
-set(DOXYGEN_EXTRACT_STATIC  YES)
+set(DOXYGEN_PROJECT_NAME         "${PROJECT_NAME}")
+set(DOXYGEN_STRIP_FROM_PATH      "../../")
+set(DOXYGEN_TAB_SIZE             2)
+set(DOXYGEN_EXTRACT_ALL          YES)
+set(DOXYGEN_EXTRACT_STATIC       YES)
 set(DOXYGEN_EXTRACT_ANON_NSPACES YES)
 set(DOXYGEN_FILE_PATTERNS
-    "*.c" "*.cc" "*.cxx" "*.cpp" "*.c++" "*.java" "*.ii" "*.ixx" "*.ipp"
-    "*.i++" "*.inl" "*.idl" "*.ddl" "*.odl" "*.h" "*.hh" "*.hxx" "*.hpp" "*.h++"
-    "*.cs" "*.d" "*.php" "*.php4" "*.php5" "*.phtml" "*.inc" "*.m" "*.markdown"
-    "*.md" "*.mm" "*.dox" "*.py" "*.pyw" "*.f90" "*.f95" "*.f03" "*.f08" "*.f"
-    "*.for" "*.tcl" "*.vhd" "*.vhdl" "*.ucf" "*.qsf" "Makefile"
-    "Makefile.dependencies" "*.inc" "*.tpl" "*.sh" "*.fd" "*.params" "README"
+  "*.c" "*.cc" "*.cxx" "*.cpp" "*.c++" "*.java" "*.ii" "*.ixx" "*.ipp"
+  "*.i++" "*.inl" "*.idl" "*.ddl" "*.odl" "*.h" "*.hh" "*.hxx" "*.hpp" "*.h++"
+  "*.cs" "*.d" "*.php" "*.php4" "*.php5" "*.phtml" "*.inc" "*.m" "*.markdown"
+  "*.md" "*.mm" "*.dox" "*.py" "*.pyw" "*.f90" "*.f95" "*.f03" "*.f08" "*.f"
+  "*.for" "*.tcl" "*.vhd" "*.vhdl" "*.ucf" "*.qsf" "Makefile" "CMakeLists.txt"
+  "*.inc" "*.tpl" "*.sh" "*.fd" "*.params" "README"
 )
 
 
-set(DOXYGEN_RECURSIVE              YES)
-set(DOXYGEN_EXAMPLE_PATH           "src/porting-scripts")
-set(DOXYGEN_IMAGE_PATH             "src/asymptote-figures")
-set(DOXYGEN_SOURCE_BROWSER         YES)
-set(DOXYGEN_USE_MATHJAX            YES)
-set(DOXYGEN_MATHJAX_RELPATH        "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3")
-set(DOXYGEN_EXTRA_PACKAGES         "amsmath")
-set(DOXYGEN_GENERATE_LATEX         YES)
+set(DOXYGEN_RECURSIVE            YES)
+set(DOXYGEN_EXAMPLE_PATH         "src/porting-scripts")
+set(DOXYGEN_IMAGE_PATH           "src/asymptote-figures")
+set(DOXYGEN_SOURCE_BROWSER       YES)
+set(DOXYGEN_USE_MATHJAX          YES)
+set(DOXYGEN_MATHJAX_RELPATH      "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3")
+set(DOXYGEN_EXTRA_PACKAGES       "amsmath")
+set(DOXYGEN_GENERATE_LATEX       YES)
 
 set(SOURCES
-    "src/introduction.txt"
-    "src/features.txt"
-    "src/theory.txt"
-    "src/implementation.txt"
-    "src/version2-differences.txt"
-    "src/porting-content-from-v1-to-v2.txt"
-    "porting-content-from-v1-to-v2-examples/"
-    "../cpp/include/"
-    "../c/include/"
-    "../fortran/include/"
-    "../examples/model_drivers/"
-    "../examples/models/"
-    "../examples/simulators/"
-)
+  "src/introduction.txt"
+  "src/features.txt"
+  "src/theory.txt"
+  "src/implementation.txt"
+  "src/version2-differences.txt"
+  "src/porting-content-from-v1-to-v2.txt"
+  "porting-content-from-v1-to-v2-examples/"
+  "../cpp/include/"
+  "../c/include/"
+  "../fortran/include/"
+  "../examples/model-drivers/"
+  "../examples/models/"
+  "../examples/simulators/"
+  )
 
 if(DOXYGEN_FOUND)
   doxygen_add_docs(
-      docs
-      ${SOURCES}
-      COMMENT "Generate documentation"
-  )
-  
+    docs
+    ${SOURCES}
+    COMMENT "Generate documentation"
+    )
+
   add_custom_command(OUTPUT refman.pdf
-                     COMMAND make
-                     COMMAND ${CMAKE_COMMAND} -E copy refman.pdf ${CMAKE_CURRENT_BINARY_DIR}/refman.pdf
-                     WORKING_DIRECTORY latex
-                     DEPENDS docs
-                     )
-  
-  #TODO fix dependencies
+    COMMAND make
+    COMMAND ${CMAKE_COMMAND} -E copy refman.pdf ${CMAKE_CURRENT_BINARY_DIR}/refman.pdf
+    WORKING_DIRECTORY latex
+    DEPENDS docs
+    )
+
+  # TODO fix dependencies
   add_custom_target(pdf DEPENDS docs refman.pdf SOURCES ${SOURCES})
 endif(DOXYGEN_FOUND)
 
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/docs/${FULL_PACKAGE_NAME} OPTIONAL)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/refman.pdf DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/docs/${FULL_PACKAGE_NAME} OPTIONAL)
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION ${CMAKE_INSTALL_DOCDIR} OPTIONAL)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/refman.pdf DESTINATION ${CMAKE_INSTALL_DOCDIR} OPTIONAL)

@@ -2,6 +2,9 @@ language: cpp
 
 sudo: required
 
+osx_image:
+ - xcode9.2
+
 os:
  - linux
  - osx
@@ -37,7 +40,7 @@ before_script:
 script:
   - if [[ "${COVERITY_SCAN_BRANCH}" != 1 && "$COVERITY" == false ]]; then
       if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-        mkdir build && cd build && cmake -DBUILD_MODULES=ON -DENABLE_COVERAGE=ON .. && make &&
+        mkdir build && cd build && cmake -DKIM_API_BUILD_MODElS_AND_DRIVERS=ON -DKIM_API_ENABLE_SANITIZE=ON -DKIM_API_ENABLE_COVERAGE=ON .. && make &&
         make test && bash <(curl -s https://codecov.io/bash) -x gcov-6 &&
         make install DESTDIR=$PWD && rm -rf ./usr/local/* && rmdir ./usr/local;
       else
@@ -45,6 +48,7 @@ script:
                    --build-arg CC=${CC} --build-arg CXX=${CXX} --build-arg FC=${FC}
                    --build-arg CXXFLAGS="${CXXFLAGS}" --build-arg CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
                    --build-arg COVERAGE="${COVERAGE}"
+                   --build-arg SANITIZE="${SANITIZE}"
                    --build-arg CI=${CI} --build-arg TRAVIS=${TRAVIS} --build-arg TRAVIS_OS_NAME=${DISTRO:-fedora}
                    --build-arg TRAVIS_BRANCH=${TRAVIS_BRANCH} --build-arg TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER}
                    --build-arg TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST} --build-arg TRAVIS_JOB_ID=${TRAVIS_JOB_ID}

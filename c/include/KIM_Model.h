@@ -118,11 +118,12 @@ void KIM_Model_Destroy(KIM_Model ** const model);
 void KIM_Model_GetInfluenceDistance(KIM_Model const * const model,
                                     double * const influenceDistance);
 
-void KIM_Model_GetNeighborListPointers(KIM_Model const * const model,
-                                       int * const numberOfNeighborLists,
-                                       double const ** const cutoffs,
-                                       int const ** const paddingNeighborHints,
-                                       int const ** const halfListHints);
+void KIM_Model_GetNeighborListPointers(
+    KIM_Model const * const model,
+    int * const numberOfNeighborLists,
+    double const ** const cutoffs,
+    int const ** const modelWillNotRequestNeighborsOfNoncontributingParticles);
+
 
 void KIM_Model_GetUnits(KIM_Model const * const model,
                         KIM_LengthUnit * const lengthUnit,
@@ -175,7 +176,7 @@ void KIM_Model_SetSimulatorBufferPointer(KIM_Model * const model,
 void KIM_Model_GetSimulatorBufferPointer(KIM_Model const * const model,
                                          void ** const ptr);
 
-char const * const KIM_Model_String(KIM_Model const * const model);
+char const * KIM_Model_String(KIM_Model const * const model);
 
 void KIM_Model_SetLogID(KIM_Model * const model, char const * const logID);
 void KIM_Model_PushLogVerbosity(KIM_Model * const model,

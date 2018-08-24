@@ -33,17 +33,28 @@
 #
 
 
-cmake_minimum_required(VERSION 3.0)
+#
+# Requied preamble
+#
 
-list(APPEND CMAKE_MODULE_PATH $ENV{KIM_CMAKE_MODULES_DIR})
-find_package(KIM-API-V2 2 REQUIRED)
+cmake_minimum_required(VERSION 3.4)
+
+list(APPEND CMAKE_PREFIX_PATH $ENV{KIM_API_V2_CMAKE_PREFIX_DIR})
+find_package(KIM-API-V2 2.0 REQUIRED CONFIG)
+if(NOT TARGET kim-api)
+  project("${KIM_API_PROJECT_NAME}" VERSION "${KIM_API_VERSION}"
+    LANGUAGES CXX C Fortran)
+endif()
+
+# End preamble
+
 
 set(MODEL_NAME "ex_model_Ar_P_Morse_07C")
 
-kim_add_model_target(
-    NAME ${MODEL_NAME}
-    CREATE_FUNCTION_NAME "model_create"
-    CREATE_FUNCTION_LANG "c"
-)
+add_kim_api_model_library(
+  NAME                    ${MODEL_NAME}
+  CREATE_ROUTINE_NAME     "model_create"
+  CREATE_ROUTINE_LANGUAGE "c"
+  )
 
 target_sources(${MODEL_NAME} PRIVATE ${MODEL_NAME}.c)

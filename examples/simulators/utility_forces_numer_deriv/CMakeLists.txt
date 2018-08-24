@@ -33,28 +33,24 @@
 #
 
 
-cmake_minimum_required(VERSION 3.0)
-enable_language(Fortran)
+#
+# Requied preamble
+#
 
-list(APPEND CMAKE_MODULE_PATH $ENV{KIM_CMAKE_MODULES_DIR})
-find_package(KIM-API-V2 2 REQUIRED)
+cmake_minimum_required(VERSION 3.4)
+
+list(APPEND CMAKE_PREFIX_PATH $ENV{KIM_API_V2_CMAKE_PREFIX_DIR})
+find_package(KIM-API-V2 2.0 REQUIRED CONFIG)
+if(NOT TARGET kim-api)
+  project("${KIM_API_PROJECT_NAME}" VERSION "${KIM_API_VERSION}"
+    LANGUAGES CXX C Fortran)
+  add_kim_api_imported_library()
+endif()
+
+# End preamble
+
 
 set(TEST_NAME "utility_forces_numer_deriv")
 
-add_executable(${TEST_NAME} ${TEST_NAME}.F03)
-target_link_libraries(${TEST_NAME} ${KIM_TARGET})
-
-# workaround for F03 files, use F90 instead if possible
-set_source_files_properties(${TEST_NAME}.F03 PROPERTIES LANGUAGE Fortran)
-
-set(TEST_MODELS ex_model_Ar_P_LJ
-                ex_model_Ar_P_MLJ_F03
-                ex_model_Ar_P_Morse
-                ex_model_Ar_P_Morse_07C)
-
-foreach(TEST_MODEL ${TEST_MODELS})
-    set(TEST_DIR ${CMAKE_BINARY_DIR}/Run_${TEST_NAME}_${TEST_MODEL})
-    FILE(MAKE_DIRECTORY ${TEST_DIR})
-    add_test(NAME Run_${TEST_NAME}_${TEST_MODEL} COMMAND sh -c "echo ${TEST_MODEL} | ${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME}" WORKING_DIRECTORY ${TEST_DIR})
-    set_tests_properties(Run_${TEST_NAME}_${TEST_MODEL} PROPERTIES ENVIRONMENT "KIM_API_V2_MODELS_DIR=${CMAKE_BINARY_DIR};KIM_API_V2_MODEL_DRIVERS_DIR=${CMAKE_BINARY_DIR}")
-endforeach()
+add_executable(${TEST_NAME} ${TEST_NAME}.F90)
+target_link_libraries(${TEST_NAME} kim-api)

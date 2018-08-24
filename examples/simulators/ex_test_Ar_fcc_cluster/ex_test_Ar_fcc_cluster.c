@@ -75,7 +75,7 @@ void fcc_cluster_neighborlist(int half, int numberOfParticles, double* coords,
                               double cutoff, NeighList* nl);
 
 int get_cluster_neigh(
-    void const * const dataObject,
+    void * const dataObject,
     int const numberOfNeighborLists, double const * const cutoffs,
     int const neighborListIndex,
     int const particleNumber, int * const numberOfNeighbors,
@@ -269,8 +269,7 @@ int main()
   KIM_Model_GetNeighborListPointers(model,
                                     &number_of_neighbor_lists_cluster_model,
                                     &cutoff_cluster_model,
-                                    NULL,  /* ignoring hints */
-                                    NULL);  /* ignoring hints */
+                                    NULL);  /* ignoring hint */
   if (number_of_neighbor_lists_cluster_model != 1)
     MY_ERROR("too many neighbor lists");
 
@@ -513,7 +512,7 @@ void fcc_cluster_neighborlist(int half, int numberOfParticles, double* coords,
   return;
 }
 
-int get_cluster_neigh(void const * const dataObject,
+int get_cluster_neigh(void * const dataObject,
                       int const numberOfNeighborLists,
                       double const * const cutoffs,
                       int const neighborListIndex,

@@ -35,6 +35,8 @@
 
 target_include_directories(kim-api PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+configure_file(KIM_Version.h.in ${CMAKE_BINARY_DIR}/KIM_Version.h)
+
 set(C_HEADERS
     KIM_ChargeUnit.h
     KIM_ComputeArgumentName.h
@@ -75,6 +77,6 @@ set(C_HEADERS
     KIM_TimeUnit.h
     KIM_UnitSystem.h
     ${CMAKE_BINARY_DIR}/KIM_Version.h
-)
+    )
 
-install(FILES ${C_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${FULL_PACKAGE_NAME})
+install(FILES ${C_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})

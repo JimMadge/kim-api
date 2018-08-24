@@ -64,8 +64,7 @@ struct buffer
 {
   double influenceDistance;
   double cutoff;
-  int paddingNeighborHint;
-  int halfListHint;
+  int modelWillNotRequestNeighborsOfNoncontributingParticles;
 };
 typedef struct buffer buffer;
 
@@ -343,7 +342,9 @@ static int compute(
       for (jj = 0; jj < numOfPartNeigh; ++ jj) {
         j = neighListOfCurrentPart[jj];  /* get neighbor ID */
 
-        if (i < j) {  /* short-circuit half-list */
+        if (! (particleContributing[j] && (j < i))) {
+          /* short-circuit half-list */
+
           /* compute relative position vector and squared distance */
           Rsqij = 0.0;
           for (k = 0; k < DIM; ++k) {
@@ -450,6 +451,12 @@ int model_create(KIM_ModelCreate * const modelCreate,
   buffer * bufferPointer;
   int error;
 
+  (void)requestedLengthUnit;  /* avoid unused parameter warnings */
+  (void)requestedEnergyUnit;
+  (void)requestedChargeUnit;
+  (void)requestedTemperatureUnit;
+  (void)requestedTimeUnit;
+
   /* set units */
   LOG_INFORMATION("Set model units");
   error = KIM_ModelCreate_SetUnits(
@@ -510,8 +517,7 @@ int model_create(KIM_ModelCreate * const modelCreate,
   /* set buffer values */
   bufferPointer->influenceDistance = CUTOFF;
   bufferPointer->cutoff = CUTOFF;
-  bufferPointer->paddingNeighborHint = 1;
-  bufferPointer->halfListHint = 1;
+  bufferPointer->modelWillNotRequestNeighborsOfNoncontributingParticles = 1;
 
   /* register influence distance */
   KIM_ModelCreate_SetInfluenceDistancePointer(
@@ -523,8 +529,8 @@ int model_create(KIM_ModelCreate * const modelCreate,
       modelCreate,
       1,
       &(bufferPointer->cutoff),
-      &(bufferPointer->paddingNeighborHint),
-      &(bufferPointer->halfListHint));
+      &(bufferPointer
+        ->modelWillNotRequestNeighborsOfNoncontributingParticles));
 
   if (error)
   {
@@ -555,8 +561,7 @@ static int model_refresh(KIM_ModelRefresh * const modelRefresh)
       modelRefresh,
       1,
       &(bufferPointer->cutoff),
-      &(bufferPointer->paddingNeighborHint),
-      &(bufferPointer->halfListHint));
+      &(bufferPointer->modelWillNotRequestNeighborsOfNoncontributingParticles));
 
   return FALSE;
 }
@@ -581,6 +586,9 @@ static int compute_arguments_create(
     KIM_ModelComputeArgumentsCreate * const modelComputeArgumentsCreate)
 {
   int error;
+
+  (void)modelCompute;  /* avoid unused parameter warning */
+
   /* register arguments */
   LOG_INFORMATION("Register argument supportStatus");
   error =
@@ -625,6 +633,10 @@ static int compute_arguments_destroy(
     KIM_ModelCompute const * const modelCompute,
     KIM_ModelComputeArgumentsDestroy * const modelComputeArgumentsDestroy)
 {
+
+  (void)modelCompute;  /* avoid unused parameter warnings */
+  (void)modelComputeArgumentsDestroy;
+
   /* nothing to be done */
 
   return FALSE;

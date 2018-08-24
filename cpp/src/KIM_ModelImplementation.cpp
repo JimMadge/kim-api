@@ -136,7 +136,7 @@ KIM_TimeUnit makeTimeUnitC(KIM::TimeUnit const timeUnit)
 #define SNUM( x ) static_cast<std::ostringstream &>(    \
     std::ostringstream() << std::dec << x).str()
 #define SPTR( x ) static_cast<std::ostringstream &>(                    \
-    std::ostringstream() << static_cast<void const * const>(x) ).str()
+    std::ostringstream() << static_cast<void const *>(x) ).str()
 #define SFUNC( x ) static_cast<std::ostringstream &>(           \
     std::ostringstream() << static_cast<func *>(x)).str()
 
@@ -395,15 +395,13 @@ void ModelImplementation::GetInfluenceDistance(
 void ModelImplementation::SetNeighborListPointers(
     int const numberOfNeighborLists,
     double const * const cutoffs,
-    int const * const paddingNeighborHints,
-    int const * const halfListHints)
+    int const * const modelWillNotRequestNeighborsOfNoncontributingParticles)
 {
 #if DEBUG_VERBOSITY
   std::string const callString = "SetNeighborListPointers("
       + SNUM(numberOfNeighborLists) + ", "
       + SPTR(cutoffs) + ", "
-      + SPTR(paddingNeighborHints) + ", "
-      + SPTR(halfListHints) + ").";
+      + SPTR(modelWillNotRequestNeighborsOfNoncontributingParticles) + ").";
 #endif
   LOG_DEBUG("Enter  " + callString);
 
@@ -413,16 +411,15 @@ void ModelImplementation::SetNeighborListPointers(
               + ", must be >= 1.");
   if (cutoffs == NULL)
     LOG_ERROR("Null pointer provided for cutoffs.");
-  if (paddingNeighborHints == NULL)
-    LOG_ERROR("Null pointer provided for paddingNeighborHints.");
-  if (halfListHints == NULL)
-    LOG_ERROR("Null pointer provided for halfListHints.");
+  if (modelWillNotRequestNeighborsOfNoncontributingParticles == NULL)
+    LOG_ERROR("Null pointer provided for "
+              "modelWillNotRequestNeighborsOfNoncontributingParticles.");
 #endif
 
   numberOfNeighborLists_ = numberOfNeighborLists;
   cutoffs_ = cutoffs;
-  paddingNeighborHints_ = paddingNeighborHints;
-  halfListHints_ = halfListHints;
+  modelWillNotRequestNeighborsOfNoncontributingParticles_ =
+      modelWillNotRequestNeighborsOfNoncontributingParticles;
 
   LOG_DEBUG("Exit   " + callString);
 }
@@ -430,15 +427,14 @@ void ModelImplementation::SetNeighborListPointers(
 void ModelImplementation::GetNeighborListPointers(
     int * const numberOfNeighborLists,
     double const ** const cutoffs,
-    int const ** const paddingNeighborHints,
-    int const ** const halfListHints) const
+    int const ** const modelWillNotRequestNeighborsOfNoncontributingParticles)
+    const
 {
 #if DEBUG_VERBOSITY
   std::string const callString = "GetNeighborListPointers("
       + SPTR(numberOfNeighborLists) + ", "
       + SPTR(cutoffs) + ", "
-      + SPTR(paddingNeighborHints) + ", "
-      + SPTR(halfListHints) + ").";
+      + SPTR(modelWillNotRequestNeighborsOfNoncontributingParticles) + ").";
 #endif
   LOG_DEBUG("Enter  " + callString);
 
@@ -446,10 +442,9 @@ void ModelImplementation::GetNeighborListPointers(
     *numberOfNeighborLists = numberOfNeighborLists_;
   if (cutoffs != NULL)
     *cutoffs = cutoffs_;
-  if (paddingNeighborHints != NULL)
-    *paddingNeighborHints = paddingNeighborHints_;
-  if (halfListHints != NULL)
-    *halfListHints = halfListHints_;
+  if (modelWillNotRequestNeighborsOfNoncontributingParticles != NULL)
+    *modelWillNotRequestNeighborsOfNoncontributingParticles =
+        modelWillNotRequestNeighborsOfNoncontributingParticles_;
 
   LOG_DEBUG("Exit   " + callString);
 }
@@ -1188,8 +1183,8 @@ int ModelImplementation::Compute(
   if (computeLanguage_ == LANGUAGE_NAME::cpp)
   {
     error = CppCompute(
-        reinterpret_cast<KIM::ModelCompute const * const>(&M),
-        reinterpret_cast<KIM::ModelComputeArguments const * const>(
+        reinterpret_cast<KIM::ModelCompute const *>(&M),
+        reinterpret_cast<KIM::ModelComputeArguments const *>(
             computeArguments));
   }
   else if (computeLanguage_ == LANGUAGE_NAME::c)
@@ -1255,8 +1250,7 @@ int ModelImplementation::ClearThenRefresh()
   influenceDistance_ = NULL;
   numberOfNeighborLists_ = 0;
   cutoffs_ = NULL;
-  paddingNeighborHints_ = NULL;
-  halfListHints_ = NULL;
+  modelWillNotRequestNeighborsOfNoncontributingParticles_ = NULL;
 
   typedef int ModelRefreshCpp(KIM::ModelRefresh * const);
   ModelRefreshCpp * CppRefresh
@@ -1329,17 +1323,21 @@ int ModelImplementation::ClearThenRefresh()
       LOG_DEBUG("Exit 1=" + callString);
       return true;
     }
-    if (paddingNeighborHints_ == NULL)
+    double maxCutoff = 0.0;
+    for (int i=0; i < numberOfNeighborLists_; ++i)
     {
-      LOG_ERROR("Model supplied Refresh() routine did not "
-                "set paddingNeighborHints.");
+      if (maxCutoff < cutoffs_[i]) maxCutoff = cutoffs_[i];
+    }
+    if (maxCutoff > *influenceDistance_)
+    {
+      LOG_ERROR("Model max(cutoffs) > influenceDistance.");
       LOG_DEBUG("Exit 1=" + callString);
       return true;
     }
-    if (halfListHints_ == NULL)
+    if (modelWillNotRequestNeighborsOfNoncontributingParticles_ == NULL)
     {
       LOG_ERROR("Model supplied Refresh() routine did not "
-                "set halfListHints.");
+                "set modelWillNotRequestNeighborsOfNoncontributingParticles.");
       LOG_DEBUG("Exit 1=" + callString);
       return true;
     }
@@ -1532,21 +1530,66 @@ int ModelImplementation::ConvertUnit(
   }
 #endif
 
+  bool lengthUnused = ((fromLengthUnit == KIM::LENGTH_UNIT::unused) ||
+                       (toLengthUnit == KIM::LENGTH_UNIT::unused));
+  if ((lengthExponent != 0.0) && lengthUnused)
+  {
+    LOG_ERROR("Unable to convert unit.");
+    LOG_DEBUG("Exit 1=" + callString);
+  }
   double const lengthConversion
-      = lengthConvertToSI.find(toLengthUnit)->second /
-      lengthConvertToSI.find(fromLengthUnit)->second;
+      = (lengthUnused) ? 1 : (
+          lengthConvertToSI.find(fromLengthUnit)->second /
+          lengthConvertToSI.find(toLengthUnit)->second);
+
+  bool energyUnused = ((fromEnergyUnit == KIM::ENERGY_UNIT::unused) ||
+                       (toEnergyUnit == KIM::ENERGY_UNIT::unused));
+  if ((energyExponent != 0.0) && energyUnused)
+  {
+    LOG_ERROR("Unable to convert unit.");
+    LOG_DEBUG("Exit 1=" + callString);
+  }
   double const energyConversion
-      = energyConvertToSI.find(toEnergyUnit)->second /
-      energyConvertToSI.find(fromEnergyUnit)->second;
+      = (energyUnused) ? 1 : (
+          energyConvertToSI.find(fromEnergyUnit)->second /
+          energyConvertToSI.find(toEnergyUnit)->second);
+
+  bool chargeUnused = ((fromChargeUnit == KIM::CHARGE_UNIT::unused) ||
+                       (toChargeUnit == KIM::CHARGE_UNIT::unused));
+  if ((chargeExponent != 0.0) && chargeUnused)
+  {
+    LOG_ERROR("Unable to convert unit.");
+    LOG_DEBUG("Exit 1=" + callString);
+  }
   double const chargeConversion
-      = chargeConvertToSI.find(toChargeUnit)->second /
-      chargeConvertToSI.find(fromChargeUnit)->second;
+      = (chargeUnused) ? 1 : (
+          chargeConvertToSI.find(fromChargeUnit)->second /
+          chargeConvertToSI.find(toChargeUnit)->second);
+
+  bool temperatureUnused =
+      ((fromTemperatureUnit == KIM::TEMPERATURE_UNIT::unused) ||
+       (toTemperatureUnit == KIM::TEMPERATURE_UNIT::unused));
+  if ((temperatureExponent != 0.0) && temperatureUnused)
+  {
+    LOG_ERROR("Unable to convert unit.");
+    LOG_DEBUG("Exit 1=" + callString);
+  }
   double const temperatureConversion
-      = temperatureConvertToSI.find(toTemperatureUnit)->second /
-      temperatureConvertToSI.find(fromTemperatureUnit)->second;
+      = (temperatureUnused) ? 1 : (
+          temperatureConvertToSI.find(fromTemperatureUnit)->second /
+          temperatureConvertToSI.find(toTemperatureUnit)->second);
+
+  bool timeUnused = ((fromTimeUnit == KIM::TIME_UNIT::unused) ||
+                     (toTimeUnit == KIM::TIME_UNIT::unused));
+  if ((timeExponent != 0.0) && timeUnused)
+  {
+    LOG_ERROR("Unable to convert unit.");
+    LOG_DEBUG("Exit 1=" + callString);
+  }
   double const timeConversion
-      = timeConvertToSI.find(toTimeUnit)->second /
-      timeConvertToSI.find(fromTimeUnit)->second;
+      = (timeUnused) ? 1 : (
+          timeConvertToSI.find(fromTimeUnit)->second /
+          timeConvertToSI.find(toTimeUnit)->second);
 
   *conversionFactor
       = pow(lengthConversion, lengthExponent)
@@ -1686,16 +1729,15 @@ std::string const & ModelImplementation::String() const
   ss << "Number Of Neighbor Lists : " << numberOfNeighborLists_ << "\n";
   ss << "Neighbor List Cutoffs :\n";
   ss << "\t" << "index" << " : " << std::setw(20) << "cutoff distance"
-     << std::setw(25) << "paddingNeighborHint"
-     << std::setw(15) << "halfListHint" << "\n";
+     << std::setw(40)
+     << "modelWillNotRequestNeighborsOfNoncontributingParticles" << "\n";
   ss << "\t" << "-----" << "---" << std::setw(20) << "--------------------"
-     << std::setw(25) << "-------------------------"
-     << std::setw(15) << "---------------" << "\n";
+     << std::setw(40) << "----------------------------------------" << "\n";
   for (int i=0; i<numberOfNeighborLists_; ++i)
   {
     ss << "\t" << std::setw(5) << i << " : " << std::setw(20) << cutoffs_[i]
-       << std::setw(25) << paddingNeighborHints_[i]
-       << std::setw(15) << halfListHints_[i]
+       << std::setw(40)
+       << modelWillNotRequestNeighborsOfNoncontributingParticles_[i]
        << "\n";
   }
   ss << "\n\n";
@@ -1791,8 +1833,7 @@ ModelImplementation::ModelImplementation(ModelLibrary * const modelLibrary,
     influenceDistance_(NULL),
     numberOfNeighborLists_(0),
     cutoffs_(NULL),
-    paddingNeighborHints_(NULL),
-    halfListHints_(NULL),
+    modelWillNotRequestNeighborsOfNoncontributingParticles_(NULL),
     refreshLanguage_(LANGUAGE_NAME::cpp),
     refreshFunction_(NULL),
     destroyLanguage_(LANGUAGE_NAME::cpp),
@@ -1974,18 +2015,22 @@ int ModelImplementation::ModelCreate(
     return true;
   }
 
-  if (paddingNeighborHints_ == NULL)
+  double maxCutoff = 0.0;
+  for (int i=0; i < numberOfNeighborLists_; ++i)
   {
-    LOG_ERROR("Model supplied Create() routine did not set "
-              "paddingNeighborHints.");
+    if (maxCutoff < cutoffs_[i]) maxCutoff = cutoffs_[i];
+  }
+  if (maxCutoff > *influenceDistance_)
+  {
+    LOG_ERROR("Model max(cutoffs) > influenceDistance.");
     LOG_DEBUG("Exit 1=" + callString);
     return true;
   }
 
-  if (halfListHints_ == NULL)
+  if (modelWillNotRequestNeighborsOfNoncontributingParticles_ == NULL)
   {
     LOG_ERROR("Model supplied Create() routine did not set "
-              "halfListHints.");
+              "modelWillNotRequestNeighborsOfNoncontributingParticles.");
     LOG_DEBUG("Exit 1=" + callString);
     return true;
   }
@@ -2153,7 +2198,7 @@ int ModelImplementation::ModelComputeArgumentsCreate(ComputeArguments * const
   if (computeArgumentsCreateLanguage_ == LANGUAGE_NAME::cpp)
   {
     error = CppComputeArgumentsCreate(
-        reinterpret_cast<KIM::ModelCompute const * const>(&M),
+        reinterpret_cast<KIM::ModelCompute const *>(&M),
         reinterpret_cast<KIM::ModelComputeArgumentsCreate *>(computeArguments));
   }
   else if (computeArgumentsCreateLanguage_ == LANGUAGE_NAME::c)
@@ -2214,19 +2259,19 @@ int ModelImplementation::ModelComputeArgumentsDestroy(ComputeArguments * const
       KIM::ModelCompute const * const,
       KIM::ModelComputeArgumentsDestroy * const);
   ModelComputeArgumentsDestroyCpp * CppComputeArgumentsDestroy
-      = reinterpret_cast<ModelComputeArgumentsDestroyCpp * const>(
+      = reinterpret_cast<ModelComputeArgumentsDestroyCpp *>(
           computeArgumentsDestroyFunction_);
   typedef int ModelComputeArgumentsDestroyC(
       KIM_ModelCompute const * const,
       KIM_ModelComputeArgumentsDestroy * const);
   ModelComputeArgumentsDestroyC * CComputeArgumentsDestroy
-      = reinterpret_cast<ModelComputeArgumentsDestroyC * const>(
+      = reinterpret_cast<ModelComputeArgumentsDestroyC *>(
           computeArgumentsDestroyFunction_);
   typedef void ModelComputeArgumentsDestroyF(
       KIM_ModelCompute const * const,
       KIM_ModelComputeArgumentsDestroy * const, int * const);
   ModelComputeArgumentsDestroyF * FComputeArgumentsDestroy
-      = reinterpret_cast<ModelComputeArgumentsDestroyF * const>(
+      = reinterpret_cast<ModelComputeArgumentsDestroyF *>(
           computeArgumentsDestroyFunction_);
 
   int error;
@@ -2236,8 +2281,8 @@ int ModelImplementation::ModelComputeArgumentsDestroy(ComputeArguments * const
   if (computeArgumentsDestroyLanguage_ == LANGUAGE_NAME::cpp)
   {
     error = CppComputeArgumentsDestroy(
-        reinterpret_cast<KIM::ModelCompute const * const>(&M),
-        reinterpret_cast<KIM::ModelComputeArgumentsDestroy * const>(
+        reinterpret_cast<KIM::ModelCompute const *>(&M),
+        reinterpret_cast<KIM::ModelComputeArgumentsDestroy *>(
             computeArguments));
   }
   else if (computeArgumentsDestroyLanguage_ == LANGUAGE_NAME::c)

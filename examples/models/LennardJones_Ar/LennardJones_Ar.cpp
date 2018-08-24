@@ -52,8 +52,7 @@ class LennardJones_Ar
       influenceDistance_(8.1500),
       cutoff_(influenceDistance_),
       cutoffSq_(cutoff_*cutoff_),
-      paddingNeighborHints_(1),
-      halfListHints_(1)
+      modelWillNotRequestNeighborsOfNoncontributingParticles_(1)
   {
     *error = ConvertUnits(modelCreate,
                           requestedLengthUnit,
@@ -66,10 +65,10 @@ class LennardJones_Ar
     modelCreate->SetModelNumbering(KIM::NUMBERING::zeroBased);
 
     modelCreate->SetInfluenceDistancePointer(&influenceDistance_);
-    modelCreate->SetNeighborListPointers(1,
-                                         &cutoff_,
-                                         &paddingNeighborHints_,
-                                         &halfListHints_);
+    modelCreate->SetNeighborListPointers(
+        1,
+        &cutoff_,
+        &modelWillNotRequestNeighborsOfNoncontributingParticles_);
 
     modelCreate->SetSpeciesCode(KIM::SPECIES_NAME::Ar, 0);
 
@@ -128,10 +127,10 @@ class LennardJones_Ar
     // nothing to do
 
     modelRefresh->SetInfluenceDistancePointer(&(model->influenceDistance_));
-    modelRefresh->SetNeighborListPointers(1,
-                                          &(model->cutoff_),
-                                          &(model->paddingNeighborHints_),
-                                          &(model->halfListHints_));
+    modelRefresh->SetNeighborListPointers(
+        1,
+        &(model->cutoff_),
+        &(model->modelWillNotRequestNeighborsOfNoncontributingParticles_));
 
     // everything is good
     return false;
@@ -168,13 +167,13 @@ class LennardJones_Ar
             &particleContributing)
         || modelComputeArguments->GetArgumentPointer(
             KIM::COMPUTE_ARGUMENT_NAME::coordinates,
-            (double const ** const) &coordinates)
+            (double const **) &coordinates)
         || modelComputeArguments->GetArgumentPointer(
             KIM::COMPUTE_ARGUMENT_NAME::partialEnergy,
             &partialEnergy)
         || modelComputeArguments->GetArgumentPointer(
             KIM::COMPUTE_ARGUMENT_NAME::partialForces,
-            (double const ** const) &partialForces);
+            (double const **) &partialForces);
     if (error)
     {
       LOG_ERROR("Unable to get argument pointers");
@@ -220,7 +219,7 @@ class LennardJones_Ar
           j = neighbors[jj];
           jContributing = particleContributing[j];
 
-          if (i < j)
+          if (! (jContributing && (j < i)))
           {
             xrij = coordinates[j*DIMENSION + 0] - xcoord;
             yrij = coordinates[j*DIMENSION + 1] - ycoord;
@@ -279,6 +278,8 @@ class LennardJones_Ar
             KIM::COMPUTE_ARGUMENT_NAME::partialForces,
             KIM::SUPPORT_STATUS::required);
 
+    (void)modelCompute;  // avoid unused parameter warning
+
     // register callbacks
     //
     // none
@@ -292,6 +293,9 @@ class LennardJones_Ar
   {
     // noting to do
 
+    (void)modelCompute;  // avoid unused parameter warnings
+    (void)modelComputeArgumentsDestroy;
+
     // everything is good
     return false;
   };
@@ -304,8 +308,7 @@ class LennardJones_Ar
   double influenceDistance_;
   double cutoff_;
   double cutoffSq_;
-  int const paddingNeighborHints_;
-  int const halfListHints_;
+  int const modelWillNotRequestNeighborsOfNoncontributingParticles_;
 
   //****************************************************************************
 #include "KIM_ModelCreateLogMacros.hpp"

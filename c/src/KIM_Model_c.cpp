@@ -220,18 +220,18 @@ void KIM_Model_GetInfluenceDistance(KIM_Model const * const model,
   pModel->GetInfluenceDistance(influenceDistance);
 }
 
-void KIM_Model_GetNeighborListPointers(KIM_Model const * const model,
-                                       int * const numberOfNeighborLists,
-                                       double const ** const cutoffs,
-                                       int const ** const paddingNeighborHints,
-                                       int const ** const halfListHints)
+void KIM_Model_GetNeighborListPointers(
+    KIM_Model const * const model,
+    int * const numberOfNeighborLists,
+    double const ** const cutoffs,
+    int const ** const modelWillNotRequestNeighborsOfNoncontributingParticles)
 {
   CONVERT_POINTER;
 
-  pModel->GetNeighborListPointers(numberOfNeighborLists,
-                                  cutoffs,
-                                  paddingNeighborHints,
-                                  halfListHints);
+  pModel->GetNeighborListPointers(
+      numberOfNeighborLists,
+      cutoffs,
+      modelWillNotRequestNeighborsOfNoncontributingParticles);
 }
 
 void KIM_Model_GetUnits(KIM_Model const * const model,
@@ -279,7 +279,7 @@ int KIM_Model_ComputeArgumentsDestroy(
   CONVERT_POINTER;
 
   KIM::ComputeArguments * pComputeArguments
-      = reinterpret_cast<KIM::ComputeArguments * const >
+      = reinterpret_cast<KIM::ComputeArguments *>
       ((*computeArguments)->p);
 
   int err = pModel->ComputeArgumentsDestroy(&pComputeArguments);
@@ -301,8 +301,7 @@ int KIM_Model_Compute(KIM_Model const * const model,
   CONVERT_POINTER;
 
   KIM::ComputeArguments const * const pComputeArguments
-      = reinterpret_cast<KIM::ComputeArguments const * const>
-      (computeArguments->p);
+      = reinterpret_cast<KIM::ComputeArguments const *>(computeArguments->p);
 
   return pModel->Compute(pComputeArguments);
 }
@@ -424,7 +423,7 @@ void KIM_Model_GetSimulatorBufferPointer(KIM_Model const * const model,
   pModel->GetSimulatorBufferPointer(ptr);
 }
 
-char const * const KIM_Model_String(KIM_Model const * const model)
+char const * KIM_Model_String(KIM_Model const * const model)
 {
   CONVERT_POINTER;
 

@@ -120,8 +120,7 @@ void KIM_ModelDriverCreate_SetNeighborListPointers(
     KIM_ModelDriverCreate * const modelDriverCreate,
     int const numberOfNeighborLists,
     double const * const cutoffs,
-    int const * const paddingNeighborHints,
-    int const * const halfListHints);
+    int const * const modelWillNotRequestNeighborsOfNoncontributingParticles);
 
 int KIM_ModelDriverCreate_SetRefreshPointer(
     KIM_ModelDriverCreate * const modelDriverCreate,
@@ -186,7 +185,7 @@ void KIM_ModelDriverCreate_LogEntry(
     KIM_LogVerbosity const logVerbosity, char const * const message,
     int const lineNumber, char const * const fileName);
 
-char const * const KIM_ModelDriverCreate_String(
+char const * KIM_ModelDriverCreate_String(
     KIM_ModelDriverCreate const * const modelDriverCreate);
 
 #endif  /* KIM_MODEL_DRIVE_CREATE_H_ */
